@@ -23,9 +23,7 @@ u_int32_t calc_hashnr(const char *key, u_int32_t length);
 ****************************************/
 char* ipaddr2str(u_int32_t ipaddr, char* straddr);
 
-int str2bytesH(const char* str, unsigned char* data, unsigned int data_len);
-
-int str2bytesH1(const char* str, unsigned char* data, unsigned int data_len);
+int str2bytes(const char* str, unsigned char* data, unsigned int data_len);
 
 int bytes2strH(const unsigned char* data, int data_len, char* str);
 
@@ -65,7 +63,7 @@ void hash2string_ex(const char *hash, char *string, int hashLen);
 /****************************************
 * about dir path
 ****************************************/
-bool PathExist(const char *name);
+//bool PathExist(const char *name);
 
 int  IsDir (const char * name) ;
 

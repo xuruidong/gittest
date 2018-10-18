@@ -1,14 +1,21 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <assert.h>
+
+#if 0
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <stdlib.h>
+
 #include <unistd.h>
-#include <stdio.h>
-#include <assert.h>
-#include <string.h>
-#include <ctype.h>
+
+
+
+
 #include <fcntl.h>
 #include <errno.h>
 #include <syslog.h>
@@ -30,7 +37,228 @@
 #include "utils.h"
 
 #define MKDEV(ma,mi)	((ma)<<8 | (mi))
+#endif
 
+
+
+
+
+//========================================================================
+int str2bytes(const char* str, unsigned char* data, unsigned int data_len)
+{
+  unsigned int n = 0;
+  unsigned int i = 0;
+  const char* pstr = str;
+
+  assert(NULL != str);
+  assert(NULL != data);
+  
+  if (strlen(str)%2 != 0)
+	return 0;
+
+  if ( data_len < strlen(str)/2)
+	return 0;
+
+  
+  for(i=0; i<strlen(str)/2; i++){
+	if(*pstr>='0'&& *pstr<='9'){
+		data[i]=*pstr-'0';
+	}else
+	{
+		data[i]=tolower(*pstr)-'a'+10;
+	}
+	data[i]<<=4;
+	pstr++;
+	if(*pstr>='0'&&*pstr<='9'){
+		data[i]+=*pstr-'0';
+	}else
+	{
+		data[i]+=tolower(*pstr)-'a'+10;
+	}
+ 
+	pstr ++;
+	n++;
+  }
+  
+  return n;
+
+}
+
+//========================================================================
+int bytes2strH(const unsigned char* data, int data_len, char* str)
+{
+  int i = 0;
+  char* pstr = str;
+  int n = 0;
+
+  assert(NULL != data);
+  assert(NULL != str);
+
+  for( i=0; i<data_len; i++){
+	sprintf(pstr, "%02X", data[i]);
+	pstr += 2;
+	n++;
+  }
+  return n;
+}
+
+//========================================================================
+int isxdigitstr(const char* str)
+{
+  assert(NULL != str);
+  int i = 0;
+  int ret = 1;
+  int str_len = strlen(str);
+
+  if (str_len%2){
+  	return 0;
+
+  }
+  for(i=0; i<str_len; i++){
+	if (isxdigit(str[i]) == 0){
+		ret = 0;
+		break;
+	}//if
+  }//for
+
+  return ret;
+}
+
+int isdigitstr(const char* str)
+{
+  assert(NULL != str);
+  
+  unsigned int i = 0;
+  int ret = 1;
+
+  if (isdigit(str[i]) == 0 && str[i] != '-' && str[i] != '+'){
+  		return 0;
+  }
+  for(i=1; i<strlen(str); i++){
+	if (isdigit(str[i]) == 0){
+		ret = 0;
+		break;
+	}//if
+  }//for
+
+  return ret;
+
+}
+
+
+/**
+*@brief	 	éªŒè¯IPåœ°å€
+*@param		ip addr string
+*@return	æˆåŠŸ - 0, å¤±è´¥ - -1
+*/
+int is_str_ip(const char *IP)
+{
+	int i=0,ip_i=0,d_num=0;
+    unsigned int ip_value=0;
+    short tmp=0;
+    char ip_tmp[4][5]={{0},{0},{0},{0}};
+    while(IP[i] != '\0')
+    {
+        if(IP[i] == '.')
+        {
+            ip_tmp[d_num][ip_i]= 0;
+            ip_i=0;
+            d_num ++;
+            if(d_num>=4)
+            {
+                return -1;
+            }
+        }
+        else if(IP[i]>=0x30 && IP[i]<= 0x39)
+        {
+            ip_tmp[d_num][ip_i]= IP[i];
+            ip_i ++;
+            if(ip_i >=4)
+            {
+                return -1;
+            }
+        }
+        else
+        {
+          return -1;
+        }
+        i++;
+    }
+    for(i=0;i<4;i++)
+    {
+      if(ip_tmp[i][0]>=0x30 && ip_tmp[i][0]<=0x39)
+      {
+        tmp=atoi(ip_tmp[i]);
+        if(tmp>255 || tmp <0)
+        {
+          return -1;
+        }
+        else
+        {
+          ip_value |= (unsigned char)(tmp&0xff);
+          if(i<3)
+          {
+            ip_value <<=8;
+          }
+        }
+      }
+      else
+      {
+        return -1;
+      }
+    }
+    //return ip_value;
+
+	return 0;
+}
+
+
+//Ã—Ã–Â·Ã»Â´Â®Â´Ã³ÃÂ¡ÃÂ´Ã—ÂªÂ»Â»
+char *str2lower(char *str)
+{
+	char *p = str;
+	while(*p != '\0')
+	{
+		*p = tolower(*p);
+		++p;
+	}
+	return str;
+}
+
+char *str2upper(char *str)
+{
+	char *p = str;
+	while(*p != '\0')
+	{
+		*p = toupper(*p);
+		++p;
+	}
+	return str;
+}
+
+
+/**
+*@brief	 	strcmp_nocase
+*@param		
+*@return	æˆåŠŸ - 0, å¤±è´¥ - -1
+*/
+int strcmp_nocase(const char *s1, const char *s2)
+{
+	int n = 0;
+	unsigned int i = 0;
+	while('\0' != *(s1+i) || '\0' != *(s2+i) )
+	{
+		n = *(s1+i) - *(s2+i);
+		if(0==n || 32==n || -32==n)
+			i++;
+		else
+			return n;
+	}
+	return 0;
+}
+
+
+#if 0
 
 void daemon_init()
 {
@@ -211,242 +439,7 @@ char* ipaddr2str(u_int32_t ipaddr, char* straddr)
 	return straddr;
 }
 
-int str2bytesH(const char* str, unsigned char* data, unsigned int data_len)
-{
-/*
-  unsigned int n = 0;
-  unsigned int i = 0;
-  const char* pstr = str;
-  char buf[4];
 
-  assert(NULL != str);
-  assert(NULL != data);
-  
-  if (strlen(str)%2 != 0)
-	return 0;
-
-  if ( data_len < strlen(str)/2)
-	return 0;
-
-  
-  for(i=0; i<strlen(str)/2; i++){
-	strncpy(buf, pstr, 2);
-	buf[2]=0;
-	sscanf(buf,"%x", &(data[i]));
-	pstr += 2;
-	n++;
-  }
-  
-  return n;
-*/
-  return -1;
-}
-
-
-//========================================================================
-int str2bytesH1(const char* str, unsigned char* data, unsigned int data_len)
-{
-  unsigned int n = 0;
-  unsigned int i = 0;
-  const char* pstr = str;
-
-  assert(NULL != str);
-  assert(NULL != data);
-  
-  if (strlen(str)%2 != 0)
-	return 0;
-
-  if ( data_len < strlen(str)/2)
-	return 0;
-
-  
-  for(i=0; i<strlen(str)/2; i++){
-	if(*pstr>='0'&& *pstr<='9'){
-		data[i]=*pstr-'0';
-	}else
-	{
-		data[i]=tolower(*pstr)-'a'+10;
-	}
-	data[i]<<=4;
-	pstr++;
-	if(*pstr>='0'&&*pstr<='9'){
-		data[i]+=*pstr-'0';
-	}else
-	{
-		data[i]+=tolower(*pstr)-'a'+10;
-	}
- 
-	pstr ++;
-	n++;
-  }
-  
-  return n;
-
-}
-
-//========================================================================
-int bytes2strH(const unsigned char* data, int data_len, char* str)
-{
-  int i = 0;
-  char* pstr = str;
-  int n = 0;
-
-  assert(NULL != data);
-  assert(NULL != str);
-
-  for( i=0; i<data_len; i++){
-	sprintf(pstr, "%02X", data[i]);
-	pstr += 2;
-	n++;
-  }
-  return n;
-}
-
-//========================================================================
-int isxdigitstr(const char* str)
-{
-  assert(NULL != str);
-  unsigned int i = 0;
-  int ret = 1;
-
-  for(i=0; i<strlen(str); i++){
-	if (isxdigit(str[i]) == 0){
-		ret = 0;
-		break;
-	}//if
-  }//for
-
-  return ret;
-}
-
-int isdigitstr(const char* str)
-{
-  assert(NULL != str);
-  
-  unsigned int i = 0;
-  int ret = 1;
-
-  for(i=0; i<strlen(str); i++){
-	if (isdigit(str[i]) == 0 && str[i] != '-' && str[i] != '+'){
-		ret = 0;
-		break;
-	}//if
-  }//for
-
-  return ret;
-
-}
-
-
-//×Ö·û´®IPÑéÖ¤
-int is_str_ip(const char *sip)
-{
-	if(strlen(sip) > 15)
-		return 0;
-
-	const char *cp = sip;
-	while(*cp != '\0')
-	{
-		if((*cp<'0' || *cp>'9') && (*cp!='.'))
-			return 0;
-		++cp;
-	}
-
-	char str[16];
-	int v;
-	char *p = str, *p0 = NULL;
-	memcpy(str, sip, 16);
-
-	int i;
-	for(i=0; i<3; i++)
-	{
-		p0 = index(p, '.');
-		if(NULL == p0)
-			return 0;
-		if(p == p0)
-			return 0;
-		*p0 = '\0';
-		v = atoi(p);
-		if(v<0 || v>255)
-			return 0;
-		p = ++p0;
-	}
-
-	p0 = index(p, '.');
-	if(NULL != p0)
-		return 0;
-	if(*p == '\0')
-		return 0;
-	v = atoi(p);
-	if(v<0 || v>255)
-		return 0;
-
-	return 1;
-}
-
-
-//×Ö·û´®´óÐ¡Ð´×ª»»
-char *str2lower(char *str)
-{
-	char *p = str;
-	while(*p != '\0')
-	{
-		*p = tolower(*p);
-		++p;
-	}
-	return str;
-}
-
-char *str2upper(char *str)
-{
-	char *p = str;
-	while(*p != '\0')
-	{
-		*p = toupper(*p);
-		++p;
-	}
-	return str;
-}
-
-
-//×Ö·û´®±È½Ï ²»Çø·Ö´óÐ¡Ð´
-int strcmp_nocase(const char *s1, const char *s2)
-{
-	int n = 0;
-	unsigned int i = 0;
-	while('\0' != *(s1+i) || '\0' != *(s2+i) )
-	{
-		n = *(s1+i) - *(s2+i);
-		if(0==n || 32==n || -32==n)
-			i++;
-		else
-			return n;
-	}
-	return 0;
-}
-
-
-//domain×Ö·û´®»á±»¸Ä³ÉÐ¡Ð´×Ö·û´®
-char *trim_domain_string(char *domain)
-{
-	char *p0, *p1;
-	
-	str2lower(domain);
-
-	p0 = strstr(domain, "http://");
-	if(!p0)
-		p0 = domain;
-	else
-		p0 += 7;
-
-	p1 = strstr(p0, "www.");
-	if(!p1)
-		p1 = p0;
-	else
-		p1 += 4;
-	
-	return p1;
-}
 
 
 
@@ -536,7 +529,7 @@ int str_to_hash(const char* url_info_hash, unsigned char* info_hash)
 }
 
 
-//×Ö·û´®hash
+//Ã—Ã–Â·Ã»Â´Â®hash
 unsigned long get_str_hash(const char *c)
 {
 	unsigned long ret=0;
@@ -633,67 +626,10 @@ void hash2string_ex(const char *hash, char *string, int hashLen)
 /****************************************
 * about dir path
 ****************************************/
-bool PathExist(const char *name)
-{
-	struct  stat  buff; 
-	if (lstat(name,&buff) < 0 )
-		return false;
-	return true;
-}
 
 
-int  IsDir (const char * name) 
-{
-	struct  stat  buff;  
-	
-	if (lstat(name,&buff) < 0 )
-	  return -1; //if not exist name ,ignore
-	
-	/*if is directory return 1 ,else return 0*/ 
-	if( S_ISDIR(buff.st_mode) )
-		return 0;
-	else 
-		return -1;
-}
 
 
-int CreatePath(const char *path)
-{
-	char buf[1024];
-	int len;
-	char *p ;
-
-	len = strlen(path);
-	if(len >= 1023)
-		return -1;
-
-	strcpy(buf, path);
-	strcat(buf, "/");
-	if(buf[0] != '/')
-		return -1; 
-	
- 	p = buf;
-	for(; *p == '/'; p++);
-	if(*p == '\0')
-		return 0;
-	while(p)
-	{
-		p = strchr(p, '/');
-		if(p)
-		{
-			*p = '\0';
-			if(IsDir(buf) < 0)
-				if(mkdir(buf, 0755) < 0)
-					return -1;
-
-			*p = '/';
-			p++;
-			for(; *p == '/'; p++); 
-		}
-	}
-
-	return 0;
-}
 
 
 
@@ -940,5 +876,5 @@ void dump_debug_data(const char *data, int data_len, const char *file_name)
 	printf("dump file \"%s\" success\n", file_name);
 	fclose(fp);
 }
-
+#endif
 
