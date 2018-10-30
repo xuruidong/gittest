@@ -29,19 +29,19 @@ void llist_destroy(LLIST *, llist_node_op *);
 
 int llist_insert(LLIST *, const void *data, int mode);
 
-void llist_delet(LLIST *, const void *key, llist_cmp *, llist_node_op *node_op);
+int llist_delet(LLIST *, const void *key, llist_cmp *, llist_node_op *node_op);
 
 void *llist_find(LLIST *, const void *key, llist_cmp *);
 
 void llist_travel(LLIST *, llist_op *);
 
-void llist_clear(LLIST *ptr, llist_node_op *node_op);
+int llist_clear(LLIST *ptr, llist_node_op *node_op);
 
 //int llist_fetch(LLIST *, void *data, const void *key, llist_cmp *);
 
 int llist_getnum(LLIST *);
 
-void llist_check(LLIST *ptr, llist_node_check *node_check);
+int llist_check(LLIST *ptr, llist_node_check *node_check);
 
 
 #endif

@@ -32,17 +32,19 @@ void llist_destroy(LLIST *ptr, llist_node_op *node_op)
       free(ptr);
 }
 
-void llist_clear(LLIST *ptr, llist_node_op *node_op)
+int llist_clear(LLIST *ptr, llist_node_op *node_op)
 {
 	struct llist_node_st *cur, *save;
-
+	int n = 0;
 	for (cur = ptr->head.next; cur != &ptr->head; cur = save) {
 		save = cur->next;
 		if (node_op)
 			node_op(cur->data);
 		free(cur);
+		n++;
 	}
 	ptr->head.prev = ptr->head.next = cur;
+	return n;
 }
 
 int llist_insert(LLIST *ptr, const void *data, int mode)
@@ -82,13 +84,13 @@ static struct llist_node_st *find__(LLIST *ptr, const void *key, llist_cmp *cmp)
       return cur;
 }
 
-void llist_delet(LLIST *ptr, const void *key, llist_cmp *cmp, llist_node_op *node_op)
+int llist_delet(LLIST *ptr, const void *key, llist_cmp *cmp, llist_node_op *node_op)
 {
 	struct llist_node_st *node;
 
 	node = find__(ptr, key, cmp);
 	if (node == &ptr->head) {
-	    return;
+	    return -1;
 	}
 
 	node->next->prev = node->prev;
@@ -98,6 +100,7 @@ void llist_delet(LLIST *ptr, const void *key, llist_cmp *cmp, llist_node_op *nod
 		node_op(node->data);
 	
 	free(node);
+	return 0;
 }
 
 void *llist_find(LLIST *ptr, const void *key, llist_cmp *cmp)
@@ -134,23 +137,26 @@ int llist_getnum(LLIST *ptr)
       return i;
 }
 
-void llist_check(LLIST *ptr, llist_node_check *node_check)
+int llist_check(LLIST *ptr, llist_node_check *node_check)
 {
     struct llist_node_st *cur, *save;
 	if (!ptr)
-		return;
-	
-      for (cur = ptr->head.next; cur != &ptr->head; cur = save) {
+		return -1;
+
+	int size = 0;
+	for (cur = ptr->head.next; cur != &ptr->head; cur = save) {
 		save = cur->next;
 		if (node_check){
 			if(node_check(cur->data) == 0){
 				cur->next->prev = cur->prev;
-      			cur->prev->next = cur->next;
+					cur->prev->next = cur->next;
 				free(cur);
 			}	
 		}
-      }
-      //free(ptr);
+		size ++;
+	}
+	return size;
+	//free(ptr);
 }
 
 
