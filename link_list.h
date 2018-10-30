@@ -37,7 +37,7 @@ void llist_travel(LLIST *, llist_op *);
 
 int llist_clear(LLIST *ptr, llist_node_op *node_op);
 
-//int llist_fetch(LLIST *, void *data, const void *key, llist_cmp *);
+int llist_fetch(LLIST *, void *data, const void *key, llist_cmp *);
 
 int llist_getnum(LLIST *);
 

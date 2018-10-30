@@ -159,4 +159,21 @@ int llist_check(LLIST *ptr, llist_node_check *node_check)
 	//free(ptr);
 }
 
+int llist_fetch(LLIST *ptr, void *data, const void *key, llist_cmp *cmp)
+{
+      struct llist_node_st *node;
+
+      node = find__(ptr, key, cmp);
+      if (node == &ptr->head) {
+	    return -1;
+      }
+
+      memcpy(data, node->data, ptr->size);
+      node->prev->next = node->next;
+      node->next->prev = node->prev;
+      free(node);
+
+      return 0;
+}
+
 
