@@ -5,6 +5,7 @@
 #define LLIST_FORWARD      1
 #define LLIST_BACKWARD     2
 
+#define LLIST_TRAVEL_BREAK	1
 
 struct llist_node_st {
       struct llist_node_st *prev;
@@ -18,7 +19,7 @@ typedef struct {
 } LLIST;
 
 typedef int llist_cmp(const void *, const void *);
-typedef void llist_op(void *);
+typedef int llist_op(void *);
 typedef int llist_node_check(void *);
 typedef void llist_node_op(void *);
 
