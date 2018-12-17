@@ -179,3 +179,29 @@ int llist_fetch(LLIST *ptr, void *data, const void *key, llist_cmp *cmp)
 }
 
 
+void llist_travel_delete(LLIST *ptr, llist_op *op, const void *key, llist_cmp *cmp, llist_node_op *node_op)
+{
+	struct llist_node_st *cur, *save;
+	int flag = 0;
+	if (!ptr)
+		return;
+
+	for (cur = ptr->head.next; cur != &ptr->head; cur = save) {
+		if (LLIST_TRAVEL_BREAK == op(cur->data)){
+			flag = 1;
+		}
+
+		save = cur->next;
+		if (!cmp(key, cur->data)){
+			cur->next->prev = cur->prev;
+			cur->prev->next = cur->next;
+			if (node_op){
+				node_op(cur->data);
+			}
+			free(cur);
+		}
+		if (flag == 1){
+			break;
+		}
+	}
+}

@@ -32,6 +32,8 @@ int llist_insert(LLIST *, const void *data, int mode);
 
 int llist_delet(LLIST *, const void *key, llist_cmp *, llist_node_op *node_op);
 
+void llist_travel_delete(LLIST *ptr, llist_op *op, const void *key, llist_cmp *cmp, llist_node_op *node_op);
+
 void *llist_find(LLIST *, const void *key, llist_cmp *);
 
 void llist_travel(LLIST *, llist_op *);
