@@ -101,6 +101,15 @@ int init_raw_socket(const char *ifname);
 void dump_debug_data(const char *data, int data_len, const char *file_name);
 
 
+/****************************************
+* about flock
+****************************************/
+int flock_exlock(const char *lock_file);
+
+int flock_shlock(const char *lock_file);
+
+void flock_unlock(int fd);
+
 #endif
 
 

@@ -878,3 +878,42 @@ void dump_debug_data(const char *data, int data_len, const char *file_name)
 }
 #endif
 
+/**********************************
+ *  flock
+ **********************************/
+
+int flock_exlock(const char *lock_file)
+{
+	int lockfd = open(lock_file, O_RDWR|O_APPEND|O_CREAT, S_IRWXU);
+	if(lockfd < 0){
+		return -1;
+	}
+
+	int iret = flock(lockfd,LOCK_EX);
+	if(iret < 0){
+		close(lockfd);
+		return -2;
+	}
+	return lockfd;
+}
+
+int flock_shlock(const char *lock_file)
+{
+	int lockfd = open(lock_file, O_RDWR|O_APPEND|O_CREAT, S_IRWXU);
+	if(lockfd < 0){
+		return -1;
+	}
+
+	int iret = flock(lockfd,LOCK_SH);
+	if(iret < 0){
+		close(lockfd);
+		return -2;
+	}
+	return lockfd;
+}
+
+void flock_unlock(int fd)
+{
+	flock(fd,LOCK_UN);
+	close(fd);
+}
