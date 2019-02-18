@@ -1,0 +1,6 @@
+
+doc:
+http://troydhanson.github.io/uthash/userguide.html
+
+src:
+https://github.com/troydhanson/uthash
