@@ -41,6 +41,9 @@ static unsigned long roundup_power_of_two(unsigned long n)
     return andv<<1;
 }
 
+//#define X_RING_DEBUG(r) {printf("[%s:%d] ph=%d, pt=%d, ch=%d, ct=%d\n", __FUNCTION__, __LINE__, (r)->prod.head, (r)->prod.tail, (r)->cons.head, (r)->cons.tail);}
+#define X_RING_DEBUG(r)
+
 x_ring_t * x_ring_create(unsigned int count)
 {
 	int i = 0;
@@ -103,65 +106,82 @@ void x_ring_destroy(x_ring_t *ringbuf, x_ring_data_op *op)
 	free(ringbuf);
 }
 
-int x_ring_sp_enqueue(x_ring_t *ringbuf, void *data, int size)
+int x_ring_sp_enqueue(x_ring_t *ringbuf, const void *data, int size)
 {
-#if 0
 	uint32_t prod_head, cons_tail;
-	uint32_t prod_next, free_entries;
-	unsigned i;
-	uint32_t mask = r->prod.mask;
-	int ret;
+	uint32_t prod_next;
 
-	prod_head = r->prod.head;
-	cons_tail = r->cons.tail;
-	/* The subtraction is done between two unsigned 32bits value
-	 * (the result is always modulo 32 bits even if we have
-	 * prod_head > cons_tail). So 'free_entries' is always between 0
-	 * and size(ring)-1. */
-	free_entries = mask + cons_tail - prod_head;
+	prod_head = ringbuf->prod.head;
+	cons_tail = ringbuf->cons.tail;
+	prod_next = (prod_head+1)&ringbuf->mask;
 
-	/* check that we have enough room in ring */
-	if (unlikely(n > free_entries)) {
-		if (behavior == RTE_RING_QUEUE_FIXED) {
-			__RING_STAT_ADD(r, enq_fail, n);
-			return -ENOBUFS;
-		}
-		else {
-			/* No free entry available */
-			if (unlikely(free_entries == 0)) {
-				__RING_STAT_ADD(r, enq_fail, n);
-				return 0;
-			}
-
-			n = free_entries;
-		}
+	if (prod_next == cons_tail){
+		//lock or sleep ???
+		//...
+		return -X_RING_RET_NOSPACE;
 	}
-
-	prod_next = prod_head + n;
-	r->prod.head = prod_next;
-
-	/* write entries in ring */
-	ENQUEUE_PTRS();
-	rte_smp_wmb();
-
-	/* if we exceed the watermark */
-	if (unlikely(((mask + 1) - free_entries + n) > r->prod.watermark)) {
-		ret = (behavior == RTE_RING_QUEUE_FIXED) ? -EDQUOT :
-			(int)(n | RTE_RING_QUOT_EXCEED);
-		__RING_STAT_ADD(r, enq_quota, n);
+	ringbuf->prod.head = prod_next;
+	
+	if (ringbuf->ring[prod_head].size < size){
+		free(ringbuf->ring[prod_head].data);
+		ringbuf->ring[prod_head].data = malloc(size);
+		ringbuf->ring[prod_head].size = size;
 	}
-	else {
-		ret = (behavior == RTE_RING_QUEUE_FIXED) ? 0 : n;
-		__RING_STAT_ADD(r, enq_success, n);
-	}
+	memcpy(ringbuf->ring[prod_head].data, data, size);
+	ringbuf->ring[prod_head].content_length = size;
 
-	r->prod.tail = prod_next;
-	return ret;
-#endif
+	ringbuf->prod.tail = prod_next;
+	X_RING_DEBUG(ringbuf);
+	return X_RING_RET_SUCCESS;
+}
+
+int x_ring_data_copy(void *ring_data_buf, const void *data, size_t size, void *arg)
+{
+	(void)arg;
+	memcpy(ring_data_buf, data, size);
 	return 0;
 }
 
-int x_ring_mp_enqueue(x_ring_t *ringbuf, void *data, int size)
+int x_ring_sp_enqueue2(x_ring_t *ringbuf, const void *data, int size, int (*copy) (void *, const void *, size_t, void *), void *arg)
+{
+	uint32_t prod_head, cons_tail;
+	uint32_t prod_next;
+
+	prod_head = ringbuf->prod.head;
+	cons_tail = ringbuf->cons.tail;
+	prod_next = (prod_head+1)&ringbuf->mask;
+
+	if (prod_next == cons_tail){
+		//lock or sleep ???
+		//...
+		return -X_RING_RET_NOSPACE;
+	}
+	ringbuf->prod.head = prod_next;
+	
+	if (ringbuf->ring[prod_head].size < size){
+		free(ringbuf->ring[prod_head].data);
+		ringbuf->ring[prod_head].data = malloc(size);
+		ringbuf->ring[prod_head].size = size;
+	}
+	
+	//memcpy(ringbuf->ring[prod_head].data, data, size);
+	copy(ringbuf->ring[prod_head].data, data, size, arg);
+	ringbuf->ring[prod_head].content_length = size;
+
+	ringbuf->prod.tail = prod_next;
+
+	return X_RING_RET_SUCCESS;
+}
+
+
+int x_ring_sp_enqueue3(x_ring_t *ringbuf, const void *data, int size)
+{
+	x_ring_sp_enqueue2(ringbuf, data, size, x_ring_data_copy, NULL);
+	return 0;
+}
+
+
+int x_ring_mp_enqueue(x_ring_t *ringbuf, const void *data, int size)
 {
 	int res = 0;
 	uint32_t prod_head = 0;
@@ -220,7 +240,7 @@ int x_ring_sc_dequeue(x_ring_t *r, x_ring_entry_t *out)
 
 	cons_head = r->cons.head;
 	prod_tail = r->prod.tail;
-
+	X_RING_DEBUG(r);
 	if ((cons_head==prod_tail)){
 		return -X_RING_RET_NOENT;
 	}

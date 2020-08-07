@@ -203,7 +203,7 @@ void rte_ring_dump(FILE *f, const x_ring_t *r);
  *     high water mark is exceeded.
  *   - -ENOBUFS: Not enough room in the ring to enqueue; no object is enqueued.
  */
-int x_ring_mp_enqueue(x_ring_t *r, void *data, int size);
+int x_ring_mp_enqueue(x_ring_t *r, const void *data, int size);
 
 
 /**
@@ -219,8 +219,9 @@ int x_ring_mp_enqueue(x_ring_t *r, void *data, int size);
  *     high water mark is exceeded.
  *   - -ENOBUFS: Not enough room in the ring to enqueue; no object is enqueued.
  */
-int x_ring_sp_enqueue(x_ring_t *ringbuf, void *data, int size);
+int x_ring_sp_enqueue(x_ring_t *ringbuf, const void *data, int size);
 
+int x_ring_sp_enqueue3(x_ring_t *ringbuf, const void *data, int size);
 
 
 /**

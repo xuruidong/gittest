@@ -39,7 +39,7 @@ int main(void)
 
 	for (i=0; i< 20; i++){
 		len = snprintf(buf, LOG_BUFF_LEN, "1234567890---%d\n", i);
-		ret = x_ring_mp_enqueue(r, buf, len);
+		ret = x_ring_sp_enqueue(r, buf, len);
 		if(ret != 0){
 			printf("log_ringbuf_enqueue fail, %d\n",i);
 			break;
@@ -48,9 +48,23 @@ int main(void)
 		usleep(1000);
 	}
 	
-
+	
 	//sleep(1);
-	x_ring_print(r);
+	//x_ring_print(r);
+
+	x_ring_entry_t entry[4];
+	for(i=0; i<sizeof(entry)/sizeof(x_ring_entry_t); i++){
+		
+		entry[i].data = malloc(200);
+		entry[i].size = 200;
+		entry[i].content_length = 0;
+		ret = x_ring_sc_dequeue(r, &entry[i]);
+		if(ret != 0){
+			printf("x_ring_mc_dequeue fail, %d, %d\n",i, ret);
+			break;
+		}
+		printf("out===%s\n", entry[i].data);
+	}
 	
 	//x_ring_destroy(r, do_when_destroy_ring);
 	x_ring_destroy(r, NULL);
