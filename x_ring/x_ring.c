@@ -41,12 +41,12 @@ static unsigned long roundup_power_of_two(unsigned long n)
     return andv<<1;
 }
 
-//#define X_RING_DEBUG(r) {printf("[%s:%d] ph=%d, pt=%d, ch=%d, ct=%d\n", __FUNCTION__, __LINE__, (r)->prod.head, (r)->prod.tail, (r)->cons.head, (r)->cons.tail);}
-#define X_RING_DEBUG(r)
+#define X_RING_DEBUG(r) {printf("[%s:%d] ph=%d, pt=%d, ch=%d, ct=%d\n", __FUNCTION__, __LINE__, (r)->prod.head, (r)->prod.tail, (r)->cons.head, (r)->cons.tail);}
+//#define X_RING_DEBUG(r)
 
-x_ring_t * x_ring_create(unsigned int count)
+x_ring_t * x_ring_create(unsigned int count, int ringbuf_size)
 {
-	int i = 0;
+	unsigned int i = 0;
 	x_ring_t * ringbuf = NULL;
 
 	if (!is_power_of_2(count)) {
@@ -58,7 +58,7 @@ x_ring_t * x_ring_create(unsigned int count)
 		perror("ring_create()\n");
 		return NULL;
 	}
-
+	
 	ringbuf->prod.head = 0;
 	ringbuf->prod.tail = 0;
 	ringbuf->cons.head = 0;
@@ -67,8 +67,8 @@ x_ring_t * x_ring_create(unsigned int count)
 	ringbuf->mask = count-1;
 	
 	for(i=0; i<count; i++){
-		ringbuf->ring[i].size = 512;
-		ringbuf->ring[i].data = (char *)malloc(512);
+		ringbuf->ring[i].size = ringbuf_size;
+		ringbuf->ring[i].data = (char *)malloc(ringbuf_size);
 		//printf("ring[%d] at %p, offset=%x\n", i, &(ringbuf->ring[i]), &(((x_ring_t *)NULL)->ring[i]));
 		/*
 		ringbuf->ring[i] = malloc(sizeof(ring_entry_t));
@@ -86,7 +86,7 @@ x_ring_t * x_ring_create(unsigned int count)
 
 void x_ring_destroy(x_ring_t *ringbuf, x_ring_data_op *op)
 {
-	int i=0;
+	unsigned int i=0;
 	for(i=0; i<ringbuf->size; i++){
 		if (ringbuf->ring[i].data){
 			if (op){
@@ -111,6 +111,7 @@ int x_ring_sp_enqueue(x_ring_t *ringbuf, const void *data, int size)
 	uint32_t prod_head, cons_tail;
 	uint32_t prod_next;
 
+	X_RING_DEBUG(ringbuf);
 	prod_head = ringbuf->prod.head;
 	cons_tail = ringbuf->cons.tail;
 	prod_next = (prod_head+1)&ringbuf->mask;
@@ -124,7 +125,7 @@ int x_ring_sp_enqueue(x_ring_t *ringbuf, const void *data, int size)
 	
 	if (ringbuf->ring[prod_head].size < size){
 		free(ringbuf->ring[prod_head].data);
-		ringbuf->ring[prod_head].data = malloc(size);
+		ringbuf->ring[prod_head].data = (char *)malloc(size);
 		ringbuf->ring[prod_head].size = size;
 	}
 	memcpy(ringbuf->ring[prod_head].data, data, size);
@@ -139,7 +140,7 @@ int x_ring_data_copy(void *ring_data_buf, const void *data, size_t size, void *a
 {
 	(void)arg;
 	memcpy(ring_data_buf, data, size);
-	return 0;
+	return size;
 }
 
 int x_ring_sp_enqueue2(x_ring_t *ringbuf, const void *data, int size, int (*copy) (void *, const void *, size_t, void *), void *arg)
@@ -160,13 +161,14 @@ int x_ring_sp_enqueue2(x_ring_t *ringbuf, const void *data, int size, int (*copy
 	
 	if (ringbuf->ring[prod_head].size < size){
 		free(ringbuf->ring[prod_head].data);
-		ringbuf->ring[prod_head].data = malloc(size);
+		ringbuf->ring[prod_head].data = (char *)malloc(size);
 		ringbuf->ring[prod_head].size = size;
 	}
 	
 	//memcpy(ringbuf->ring[prod_head].data, data, size);
-	copy(ringbuf->ring[prod_head].data, data, size, arg);
-	ringbuf->ring[prod_head].content_length = size;
+	//copy(ringbuf->ring[prod_head].data, data, size, arg);
+	//ringbuf->ring[prod_head].content_length = size;
+	ringbuf->ring[prod_head].content_length = copy(ringbuf->ring[prod_head].data, data, size, arg); 
 
 	ringbuf->prod.tail = prod_next;
 
@@ -211,7 +213,7 @@ int x_ring_mp_enqueue(x_ring_t *ringbuf, const void *data, int size)
 
 	if (ringbuf->ring[prod_head].size < size){
 		free(ringbuf->ring[prod_head].data);
-		ringbuf->ring[prod_head].data = malloc(size);
+		ringbuf->ring[prod_head].data = (char *)malloc(size);
 		ringbuf->ring[prod_head].size = size;
 	}
 	memcpy(ringbuf->ring[prod_head].data, data, size);
@@ -240,11 +242,11 @@ int x_ring_sc_dequeue(x_ring_t *r, x_ring_entry_t *out)
 
 	cons_head = r->cons.head;
 	prod_tail = r->prod.tail;
-	X_RING_DEBUG(r);
+	
 	if ((cons_head==prod_tail)){
 		return -X_RING_RET_NOENT;
 	}
-
+	X_RING_DEBUG(r);
 	cons_next = (cons_head + 1)&r->mask;
 	
 	r->cons.head = cons_next;
@@ -252,12 +254,13 @@ int x_ring_sc_dequeue(x_ring_t *r, x_ring_entry_t *out)
 	/* copy in table */
 	if ( out->size < r->ring[cons_head].content_length ){
 		free(out->data);
-		out->data = malloc(r->ring[cons_head].size);
+		out->data = (char *)malloc(r->ring[cons_head].size);
 	}
 	memcpy(out->data, r->ring[cons_head].data, r->ring[cons_head].content_length);
 	out->content_length = r->ring[cons_head].content_length;
 
 	r->cons.tail = cons_next;
+	X_RING_DEBUG(r);
 	return X_RING_RET_SUCCESS;
 }
 
@@ -292,7 +295,7 @@ int x_ring_mc_dequeue(x_ring_t *ringbuf, x_ring_entry_t *out)
 	p = &(ringbuf->ring[cons_head]);
 	if ( out->size < p->content_length ){
 		free(out->data);
-		out->data = malloc(p->size);
+		out->data = (char *)malloc(p->size);
 	}
 	memcpy(out->data, p->data, p->content_length);
 	out->content_length = p->content_length;
@@ -324,7 +327,7 @@ int x_ring_print(x_ring_t *r)
 	x_ring_entry_t ring_entry;
 	ring_entry.size = 1024;
 	ring_entry.content_length = 0;
-	ring_entry.data = malloc(ring_entry.size);
+	ring_entry.data = (char *)malloc(ring_entry.size);
 	for(i=0; i<ring_size; i++){
 		ret = x_ring_mc_dequeue(r, &ring_entry);
 		if(ret < 0){

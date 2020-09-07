@@ -161,7 +161,7 @@ typedef void x_ring_data_op(void *);
  *    - EEXIST - a memzone with the same name already exists
  *    - ENOMEM - no appropriate memory area found in which to create memzone
  */
-x_ring_t * x_ring_create(unsigned int count);
+x_ring_t * x_ring_create(unsigned int count, int ringbuf_size);
 /**
  * De-allocate all memory used by the ring.
  *
@@ -220,6 +220,7 @@ int x_ring_mp_enqueue(x_ring_t *r, const void *data, int size);
  *   - -ENOBUFS: Not enough room in the ring to enqueue; no object is enqueued.
  */
 int x_ring_sp_enqueue(x_ring_t *ringbuf, const void *data, int size);
+int x_ring_sp_enqueue2(x_ring_t *ringbuf, const void *data, int size, int (*copy) (void *, const void *, size_t, void *), void *arg);
 
 int x_ring_sp_enqueue3(x_ring_t *ringbuf, const void *data, int size);
 
